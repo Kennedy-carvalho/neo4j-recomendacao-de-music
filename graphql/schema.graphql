@@ -1,0 +1,67 @@
+type Track @exclude(operations: [CREATE, UPDATE, DELETE]) {
+  trackId: ID!
+  name: String
+  artist: String
+  spotifyId: String
+  previewUrl: String
+  genre: String
+  year: Int
+  durationMs: Int
+  danceability: Float
+  energy: Float
+  musicalKey: Int
+  loudness: Float
+  mode: Int
+  speechiness: Float
+  acousticness: Float
+  instrumentalness: Float
+  liveness: Float
+  valence: Float
+  tempo: Float
+  timeSignature: Int
+  artists: [Artist!]! @relationship(type: "PERFORMED_BY", direction: OUT)
+  genres: [Genre!]! @relationship(type: "IN_GENRE", direction: OUT)
+  tags: [Tag!]! @relationship(type: "HAS_TAG", direction: OUT)
+  similar(first: Int = 10): [Track!]!
+    @cypher(
+      statement: """
+      MATCH (this)-[:HAS_TAG]->(tag:Tag)<-[:HAS_TAG]-(rec:Track)
+      WHERE rec <> this AND rec.name IS NOT NULL
+      WITH rec, COUNT(DISTINCT tag) AS score
+      RETURN rec ORDER BY score DESC LIMIT $first
+      """
+    )
+}
+
+type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
+  userId: ID!
+  listenedTo: [Track!]! @relationship(type: "LISTENED_TO", direction: OUT)
+  recommendations(first: Int = 10): [Track!]!
+    @cypher(
+      statement: """
+      MATCH (this)-[:LISTENED_TO]->(seed:Track)<-[:LISTENED_TO]-(peer:User)
+            -[:LISTENED_TO]->(rec:Track)
+      WHERE peer <> this
+        AND rec.name IS NOT NULL
+        AND NOT EXISTS { MATCH (this)-[:LISTENED_TO]->(rec) }
+      WITH peer, rec, COUNT(DISTINCT seed) AS commonTracks
+      WITH rec, SUM(commonTracks) AS score, COUNT(DISTINCT peer) AS listeners
+      RETURN rec ORDER BY score DESC, listeners DESC LIMIT $first
+      """
+    )
+}
+
+type Artist @exclude(operations: [CREATE, UPDATE, DELETE]) {
+  name: String!
+  tracks: [Track!]! @relationship(type: "PERFORMED_BY", direction: IN)
+}
+
+type Genre @exclude(operations: [CREATE, UPDATE, DELETE]) {
+  name: String!
+  tracks: [Track!]! @relationship(type: "IN_GENRE", direction: IN)
+}
+
+type Tag @exclude(operations: [CREATE, UPDATE, DELETE]) {
+  name: String!
+  tracks: [Track!]! @relationship(type: "HAS_TAG", direction: IN)
+}

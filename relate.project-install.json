@@ -1,0 +1,12 @@
+{
+    "name": "music-recommendations",
+    "icon": "documentation/img/icon-music.svg",
+    "title": "Music Recommendations with Neo4j",
+    "description":"Recommend music using listening history, collaborative filtering, and track metadata",
+    "dbms": [
+      {
+          "targetNeo4jVersion": ">=5.0.0 <6.0.0",
+          "plugins": []
+      }
+  ]
+}

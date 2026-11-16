@@ -1,0 +1,113 @@
+= Recomendacao de musicas
+:toc:
+:toclevels: 2
+:img: img
+
+== Problema de negocio
+
+Um servico de musica pode sugerir faixas para uma pessoa a partir do que ela e outros usuarios ouviram. Este projeto combina:
+
+* catalogo de faixas, artistas, generos, tags e caracteristicas de audio;
+* historico de usuarios e contagem de reproducoes.
+
+O historico nao contem notas explicitas. Portanto, `playcount` e tratado como um sinal de interesse, nao como uma avaliacao positiva garantida.
+
+== Modelo
+
+image::{img}/music-graph-model.svg[Modelo do grafo musical, width=800]
+
+* `User`: identificado por `userId`.
+* `Track`: identificado por `trackId`; concentra nome, artista, genero, ano e caracteristicas de audio.
+* `Artist`, `Genre` e `Tag`: entidades reutilizaveis do catalogo.
+* `LISTENED_TO`: relacionamento de usuario para faixa, com a propriedade `playcount`.
+* `PERFORMED_BY`, `IN_GENRE` e `HAS_TAG`: conectam uma faixa aos seus metadados.
+
+== Algoritmos demonstrados
+
+=== Filtragem colaborativa
+
+1. Encontra faixas ouvidas pelo usuario-alvo.
+2. Encontra outros usuarios que tambem ouviram essas faixas.
+3. Soma sinais de sobreposicao e recomenda faixas desses usuarios que o usuario-alvo ainda nao ouviu.
+
+A consulta esta em `code/cypher/04_business_queries.cypher`. O campo `score` e uma pontuacao heuristica de sobreposicao; nao representa uma probabilidade nem uma avaliacao prevista.
+
+=== Filtragem por conteudo
+
+Compara as tags de uma faixa com as tags de outras faixas. Mais tags em comum geram uma pontuacao maior. O projeto tambem guarda artista e genero como nos relacionados, o que permite evoluir a pontuacao para ponderar essas caracteristicas.
+
+== Carga dos dados
+
+Use Neo4j 5.x local e copie `music_info.csv` e `listening_history.csv` para a pasta `import` do banco. Execute com `cypher-shell` e na ordem:
+
+[source,powershell]
+----
+cypher-shell -u neo4j -p "SUA_SENHA" -f code/cypher/01_constraints.cypher
+cypher-shell -u neo4j -p "SUA_SENHA" -f code/cypher/02_import_tracks.cypher
+cypher-shell -u neo4j -p "SUA_SENHA" -f code/cypher/03_import_listening_history.cypher
+----
+
+As consultas `LOAD CSV` apontam para `file:///music_info.csv` e `file:///listening_history.csv`, isto e, para os nomes dentro da pasta `import`. Os scripts criam os nos em lotes e podem ser executados novamente sem duplicar os nos ou relacionamentos.
+
+Para validar a carga com menos dados, copie `data/samples/listening_history_sample.csv` para `import/listening_history.csv`. O arquivo completo de historico tem cerca de 603 MB e esta excluido do Git; a amostra e adequada para validar a importacao, mas nao garante recomendacoes colaborativas representativas.
+
+== Perguntas de negocio
+
+* Quais faixas um usuario ainda nao ouviu, mas sao populares entre pessoas com historico semelhante?
+* Quais faixas compartilham mais tags com uma musica escolhida?
+* Quais faixas concentram o maior total de reproducoes e o maior numero de ouvintes?
+* Quais faixas do historico ainda nao possuem metadados no catalogo?
+
+As tres primeiras consultas estao em `code/cypher/04_business_queries.cypher`. Para encontrar faixas sem metadados:
+
+[source,cypher]
+----
+MATCH (track:Track)
+WHERE track.name IS NULL
+RETURN count(track) AS tracksWithoutMetadata;
+----
+
+== Verificacoes apos a carga
+
+[source,cypher]
+----
+MATCH (user:User) RETURN count(user) AS users;
+MATCH (track:Track) RETURN count(track) AS tracks;
+MATCH ()-[listening:LISTENED_TO]->()
+RETURN count(listening) AS listeningRelationships;
+MATCH (track:Track)-[:HAS_TAG]->(tag:Tag)
+RETURN track.name AS track, collect(tag.name)[0..5] AS tags
+LIMIT 10;
+----
+
+== Evidencias de execucao
+
+As capturas foram feitas no Neo4j Desktop apos carregar o catalogo musical e a amostra do historico.
+
+.Grafo musical carregado
+image::{img}/music-graph-loaded.png[Visao do grafo musical carregado, width=1000]
+
+.Faixas ouvidas pelo usuario de teste
+image::{img}/listening-history-results.png[Resultado da consulta de historico de audicoes, width=1000]
+
+.Recomendacoes colaborativas
+image::{img}/collaborative-recommendations-results.png[Primeiro trecho das recomendacoes, width=1000]
+
+.Continuacao das recomendacoes
+image::{img}/collaborative-recommendations-continuation.png[Continuacao dos resultados, width=1000]
+
+=== Origem dos dados
+
+.Pagina do dataset no Kaggle
+image::{img}/kaggle-dataset-card.png[Pagina do dataset utilizado, width=1000]
+
+.Resultado de busca no Kaggle
+image::{img}/kaggle-dataset-search.png[Resultado de busca do dataset no Kaggle, width=1000]
+
+== Troubleshooting
+
+* **O arquivo CSV nao e encontrado:** confirme a pasta `import`, os nomes dos arquivos e a permissao de leitura de arquivos locais no Neo4j.
+* **Erro com `CALL { ... } IN TRANSACTIONS`:** os scripts de importacao devem rodar fora de uma transacao explicita. Execute-os com `cypher-shell -f`.
+* **Consulta de recomendacao vazia:** a amostra e pequena e pode nao ter sobreposicao suficiente. Tente a base completa ou um usuario com historico mais conectado.
+* **Muitas faixas sem nome:** compare os `track_id` do historico com os do catalogo; o script mantem as interacoes mesmo quando o catalogo nao tem metadados para uma faixa.
+* **GitHub recusa o historico:** o CSV completo tem mais de 100 MB. Mantenha-o local, use Git LFS ou publique-o em armazenamento externo; nao remova o padrao de exclusao do `.gitignore` sem decidir como compartilhar o arquivo.

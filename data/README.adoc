@@ -1,0 +1,19 @@
+= Dados do projeto musical
+
+== Arquivos
+
+`music_info.csv` contem metadados de faixas, artista, tags, genero, ano e caracteristicas de audio.
+
+`listening_history.csv` contem `track_id`, `user_id` e `playcount`. O arquivo completo tem cerca de 603 MB e fica no ambiente local; ele e ignorado pelo Git para evitar falha no envio ao GitHub.
+
+`samples/listening_history_sample.csv` e uma amostra menor para validar a importacao e o modelo. Use-a com `music_info.csv` para testes rapidos.
+
+== Chave de integracao
+
+`track_id` e a chave entre os arquivos. O script de historico cria um no `Track` com esse identificador mesmo quando nao ha metadados correspondentes; essas faixas nao aparecem nas consultas que exigem um nome.
+
+== Fonte e licenca
+
+Fonte: https://www.kaggle.com/datasets/undefinenull/million-song-dataset-spotify-lastfm[Million Song Dataset + Spotify + Last.fm], publicado por UndefineNull no Kaggle.
+
+A pagina do dataset indica a licenca https://creativecommons.org/licenses/by-nc/4.0/[CC BY-NC 4.0 (Atribuicao-NaoComercial)]. Este projeto mantem a atribuicao e destina-se a estudo e uso nao comercial. Consulte a licenca original antes de redistribuir os dados ou usa-los comercialmente.
