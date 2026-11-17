@@ -33,6 +33,11 @@ const neoSchema = new Neo4jGraphQL({
 neoSchema.getSchema().then((schema) => {
   const server = new ApolloServer({
     schema,
+    context: () => ({
+      sessionConfig: {
+        database: process.env.NEO4J_DATABASE || "neo4j",
+      },
+    }),
     playground: true,
     introspection: true,
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground],

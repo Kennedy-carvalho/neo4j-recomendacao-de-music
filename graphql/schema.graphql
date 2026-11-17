@@ -1,4 +1,4 @@
-type Track @exclude(operations: [CREATE, UPDATE, DELETE]) {
+type Track @node @mutation(operations: []) {
   trackId: ID!
   name: String
   artist: String
@@ -29,11 +29,12 @@ type Track @exclude(operations: [CREATE, UPDATE, DELETE]) {
       WHERE rec <> this AND rec.name IS NOT NULL
       WITH rec, COUNT(DISTINCT tag) AS score
       RETURN rec ORDER BY score DESC LIMIT $first
-      """
+      """,
+      columnName: "rec"
     )
 }
 
-type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
+type User @node @mutation(operations: []) {
   userId: ID!
   listenedTo: [Track!]! @relationship(type: "LISTENED_TO", direction: OUT)
   recommendations(first: Int = 10): [Track!]!
@@ -47,21 +48,22 @@ type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
       WITH peer, rec, COUNT(DISTINCT seed) AS commonTracks
       WITH rec, SUM(commonTracks) AS score, COUNT(DISTINCT peer) AS listeners
       RETURN rec ORDER BY score DESC, listeners DESC LIMIT $first
-      """
+      """,
+      columnName: "rec"
     )
 }
 
-type Artist @exclude(operations: [CREATE, UPDATE, DELETE]) {
+type Artist @node @mutation(operations: []) {
   name: String!
   tracks: [Track!]! @relationship(type: "PERFORMED_BY", direction: IN)
 }
 
-type Genre @exclude(operations: [CREATE, UPDATE, DELETE]) {
+type Genre @node @mutation(operations: []) {
   name: String!
   tracks: [Track!]! @relationship(type: "IN_GENRE", direction: IN)
 }
 
-type Tag @exclude(operations: [CREATE, UPDATE, DELETE]) {
+type Tag @node @mutation(operations: []) {
   name: String!
   tracks: [Track!]! @relationship(type: "HAS_TAG", direction: IN)
 }

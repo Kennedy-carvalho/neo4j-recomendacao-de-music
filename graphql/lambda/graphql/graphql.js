@@ -29,7 +29,12 @@ const initServer = async () => {
       playground: true,
       introspection: true,
       plugins: [ApolloServerPluginLandingPageGraphQLPlayground],
-      context: ({ event }) => ({ req: event }),
+      context: ({ event }) => ({
+        req: event,
+        sessionConfig: {
+          database: process.env.NEO4J_DATABASE || "neo4j",
+        },
+      }),
     });
     const serverHandler = server.createHandler();
     return serverHandler;

@@ -15,4 +15,4 @@ pythonenv3.8
 # Local GraphQL configuration and installed packages.
 /graphql/.env
 /graphql/node_modules/
-/graphql/package-lock.json
+!/graphql/package-lock.json
